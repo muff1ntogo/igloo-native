@@ -1,4 +1,4 @@
-import { Stack, usePathname, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { useFonts } from 'expo-font';
@@ -6,20 +6,24 @@ import { Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700
 import { Fraunces_400Regular, Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_700Bold } from '@expo-google-fonts/fraunces';
 import { IglooProvider, useIgloo } from '@lib/igloo-store';
 import { AddModal } from '@components/igloo/AddModal';
-import { SignInScreen } from '@components/auth/SignInScreen';
-import { OnboardingScreen } from '@components/onboarding/OnboardingScreen';
 import '../global.css';
+import { useEffect } from 'react';
 
 function AppContent() {
   const { authLoading, session, onboardingComplete } = useIgloo();
   const router = useRouter();
-  const pathname = usePathname();
 
-  // Redirect from unauthenticated paths to sign-in
-  if (!authLoading && !session && pathname !== '/(tabs)') {
-    router.replace('/signin');
-    return null;
-  }
+  // Once auth resolves, redirect to the correct screen based on state
+  useEffect(() => {
+    if (authLoading) return;
+    if (!session) {
+      router.replace('/splash');
+    } else if (!onboardingComplete) {
+      router.replace('/onboarding');
+    } else {
+      router.replace('/(tabs)');
+    }
+  }, [session, onboardingComplete, authLoading, router]);
 
   if (authLoading) {
     return (
@@ -29,18 +33,15 @@ function AppContent() {
     );
   }
 
-  // No session → sign-in screen
-  if (!session) {
-    return <SignInScreen onSignedIn={() => {}} />;
-  }
-
-  // Session exists but onboarding not complete
-  if (!onboardingComplete) {
-    return <OnboardingScreen onComplete={() => router.replace('/(tabs)')} />;
-  }
-
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="splash" />
+      <Stack.Screen name="sign-in" />
+      <Stack.Screen name="sign-up" />
+      <Stack.Screen name="forgot-password" />
+      <Stack.Screen name="forgot-password/new-password" />
+      <Stack.Screen name="verify-otp" />
+      <Stack.Screen name="onboarding" />
       <Stack.Screen name="(tabs)" />
     </Stack>
   );

@@ -45,6 +45,7 @@ type Store = {
   setProfile: (p: { name: string; dob: string }) => void;
   onboardingComplete: boolean;
   setOnboardingComplete: (v: boolean) => void;
+  wantsHealthSync: boolean;
   signOut: () => Promise<void>;
   preferences: {
     textSize: TextSize;
@@ -91,6 +92,7 @@ export function IglooProvider({ children }: { children: ReactNode }) {
     dob: "",
   });
   const [onboardingComplete, setOnboardingComplete] = useState(false);
+  const [wantsHealthSync, setWantsHealthSync] = useState(false);
   const [preferences, setPreferences] =
     useState<Store["preferences"]>(DEFAULT_PREFERENCES);
 
@@ -106,6 +108,9 @@ export function IglooProvider({ children }: { children: ReactNode }) {
     AsyncStorage.getItem(STORAGE_KEY_ONBOARDING).then((s) => {
       if (s === "true") setOnboardingComplete(true);
     });
+    AsyncStorage.getItem("igloo-wants-health-sync").then((s) => {
+      if (s === "true") setWantsHealthSync(true);
+    });
   }, []);
 
   useEffect(() => {
@@ -117,6 +122,9 @@ export function IglooProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     AsyncStorage.setItem(STORAGE_KEY_ONBOARDING, String(onboardingComplete));
   }, [onboardingComplete]);
+  useEffect(() => {
+    AsyncStorage.setItem("igloo-wants-health-sync", String(wantsHealthSync));
+  }, [wantsHealthSync]);
 
   useEffect(() => {
     supabase.auth
@@ -232,9 +240,10 @@ export function IglooProvider({ children }: { children: ReactNode }) {
     addSlot, openAdd: (slot) => { setAddSlot(slot ?? null); setAddOpen(true); },
     profile, setProfile,
     onboardingComplete, setOnboardingComplete,
+    wantsHealthSync,
     signOut,
     preferences, setPreferences: (patch) => setPreferences((p) => ({ ...p, ...patch })),
-  }), [session, user, authLoading, readings, readingsLoading, addReading, meds, medsLoading, addMed, simpleView, shared, alertDismissed, addOpen, addSlot, profile, onboardingComplete, signOut, preferences]);
+  }), [session, user, authLoading, readings, readingsLoading, addReading, meds, medsLoading, addMed, simpleView, shared, alertDismissed, addOpen, addSlot, profile, onboardingComplete, wantsHealthSync, signOut, preferences]);
 
   return <IglooContext.Provider value={value}>{children}</IglooContext.Provider>;
 }

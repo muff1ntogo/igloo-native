@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import Constants from "expo-constants";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
+import { AppState, type AppStateStatus } from "react-native";
 
 const supabaseUrl =
   Constants.expoConfig?.extra?.SUPABASE_URL ??
@@ -17,15 +18,30 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+export const SUPABASE_URL = supabaseUrl;
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
     storage: {
-      getItem: (key) => AsyncStorage.getItem(key),
-      setItem: (key, value) => AsyncStorage.setItem(key, value),
-      removeItem: (key) => AsyncStorage.removeItem(key),
+      getItem: (key) => SecureStore.getItemAsync(key),
+      setItem: (key, value) => SecureStore.setItemAsync(key, value),
+      removeItem: (key) => SecureStore.deleteItemAsync(key),
     },
   },
 });
+
+// AppState listener: auto-refresh tokens only when the app is active
+export function setupAppStateListener() {
+  const onChange = (state: AppStateStatus) => {
+    if (state === "active") {
+      supabase.auth.startAutoRefresh();
+    } else {
+      supabase.auth.stopAutoRefresh();
+    }
+  };
+  AppState.addEventListener("change", onChange);
+  return () => { /* cleanup handled by RN */ };
+}
