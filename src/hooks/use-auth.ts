@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { supabase } from "@lib/supabase";
+import { makeRedirectUri } from "expo-auth-session";
+import * as WebBrowser from "expo-web-browser";
+import { parse } from "expo-linking";
+import { supabase, SUPABASE_URL, setupAppStateListener } from "@lib/supabase";
 import type { Session, User } from "@supabase/supabase-js";
 
-type Phase = "idle" | "loading" | "sent" | "error";
+const REDIRECT_URI = makeRedirectUri({ scheme: "igloo" });
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -15,6 +16,9 @@ export function useAuth() {
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
+
+    // Start auto-refresh on app active, stop when backgrounded
+    const cleanupAppState = setupAppStateListener();
 
     supabase.auth
       .getSession()
@@ -32,34 +36,128 @@ export function useAuth() {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      cleanupAppState();
+    };
   }, []);
 
-  const signIn = useCallback(async (email: string) => {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
+  const signUp = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
+    // NOTE: For OTP codes to be sent instead of a confirmation magic link,
+    // the Supabase dashboard must have "Confirm email" disabled and OTP enabled
+    // under Authentication → Providers → Email. The API call itself cannot
+    // override the project-level email confirmation setting.
+  }, []);
+
+  const signInWithPassword = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+  }, []);
+
+  const resetPassword = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: "igloo://auth",
+    });
+    if (error) throw error;
+  }, []);
+
+  const verifyOtp = useCallback(async (email: string, token: string, type: "signup" | "recovery") => {
+    const { error } = await supabase.auth.verifyOtp({ email, token, type });
+    if (error) throw error;
+  }, []);
+
+  const updatePassword = useCallback(async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw error;
+  }, []);
+
+  const signInWithGoogle = useCallback(async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
       options: {
-        emailRedirectTo: "igloo://dashboard",
+        redirectTo: REDIRECT_URI,
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+        },
       },
     });
     if (error) throw error;
+    if (!data?.url) throw new Error("Google sign-in: no auth URL returned");
+
+    const result = await WebBrowser.openAuthSessionAsync(data.url, REDIRECT_URI);
+
+    if (result.type === "success") {
+      const parsed = parse(result.url);
+      const code = parsed.queryParams?.code as string | undefined;
+      if (code) {
+        const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+        if (sessionError) throw sessionError;
+      } else {
+        throw new Error("Google sign-in: no authorization code received");
+      }
+    } else {
+      throw new Error("Google sign-in was cancelled");
+    }
+  }, []);
+
+  const signInWithApple = useCallback(async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "apple",
+      options: {
+        redirectTo: REDIRECT_URI,
+      },
+    });
+    if (error) throw error;
+    if (!data?.url) throw new Error("Apple sign-in: no auth URL returned");
+
+    const result = await WebBrowser.openAuthSessionAsync(data.url, REDIRECT_URI);
+
+    if (result.type === "success") {
+      const parsed = parse(result.url);
+      const code = parsed.queryParams?.code as string | undefined;
+      if (code) {
+        const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+        if (sessionError) throw sessionError;
+      } else {
+        throw new Error("Apple sign-in: no authorization code received");
+      }
+    } else {
+      throw new Error("Apple sign-in was cancelled");
+    }
   }, []);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
   }, []);
 
-  return { user, session, loading, signIn, signOut };
+  return {
+    user,
+    session,
+    loading,
+    signUp,
+    signInWithPassword,
+    resetPassword,
+    verifyOtp,
+    updatePassword,
+    signInWithGoogle,
+    signInWithApple,
+    signOut,
+  };
 }
 
 export function useProfile() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<{ name: string; dob: string } | null>(null);
+  const [wantsHealthSync, setWantsHealthSync] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user?.id) {
       setProfile(null);
+      setWantsHealthSync(false);
       setLoading(false);
       return;
     }
@@ -68,11 +166,12 @@ export function useProfile() {
       try {
         const { data, error } = await supabase
           .from("profiles")
-          .select("name, dob")
+          .select("name, dob, wants_health_sync")
           .eq("id", user.id)
           .single();
         if (error) throw error;
-        setProfile(data ?? null);
+        setProfile(data?.name ? data : null);
+        setWantsHealthSync(data?.wants_health_sync ?? false);
       } catch (e) {
         console.warn("[Igloo] Load profile error:", e);
       } finally {
@@ -97,7 +196,17 @@ export function useProfile() {
     [user?.id],
   );
 
-  return { profile, loading: loading || !user, upsert, user };
-}
+  const setHealthSync = useCallback(
+    async (value: boolean) => {
+      if (!user?.id) return;
+      const { error } = await supabase
+        .from("profiles")
+        .upsert({ id: user.id, wants_health_sync: value }, { onConflict: "id" });
+      if (error) throw error;
+      setWantsHealthSync(value);
+    },
+    [user?.id],
+  );
 
-export { type Phase };
+  return { profile, loading: loading || !user, upsert, setHealthSync, wantsHealthSync, user };
+}
