@@ -1,5 +1,30 @@
 import type { MetricKey, Status } from "./igloo-data";
 
+/**
+ * Centralized spacing scale.
+ *
+ * The app was rendering too tight everywhere — icon/text running flush to
+ * card edges and stacked "island" cards sitting almost on top of each other.
+ * Rather than patching each screen with different values, every layout gap
+ * reads from this scale.
+ *
+ *  - `cardPad`  : inner padding of a Card (icon/text ↔ container edge)
+ *  - `rowGap`  : gap between an icon and its label inside a row
+ *  - `island`  : vertical gap between stacked cards ("islands")
+ *  - `section`: gap between major sections / under a page header
+ *  - `scrollBottom`: bottom padding of scroll content so the last card
+ *                   clears the floating tab bar + FAB
+ */
+export const SPACE = {
+  xs: 4,
+  sm: 8,
+  rowGap: 12,
+  cardPad: 20,
+  island: 16,
+  section: 24,
+  scrollBottom: 140,
+} as const;
+
 /** Pre-computed radius scale from web `--radius: 1.25rem` (20px). RN has no calc(). */
 export const RADIUS = {
   sm: 16,

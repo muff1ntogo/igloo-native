@@ -39,7 +39,7 @@ export function DashboardSimple({
   }
 
   return (
-    <View className="px-5 pt-2 space-y-6">
+    <View className="px-5 pt-3 space-y-section">
       {flagged.length > 0 && !alertDismissed ? (
         <Card className="p-5 bg-watch-tint border-watch/30">
           <View className="flex-row items-start gap-3">

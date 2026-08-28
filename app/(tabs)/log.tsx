@@ -11,6 +11,7 @@ import {
   type Reading,
 } from "@lib/igloo-data";
 import { useIgloo } from "@lib/igloo-store";
+import { SPACE } from "@lib/tokens";
 import { Card, PageHeader } from "@components/igloo";
 import { EntryItem, type Entry } from "@components/igloo/EntryItem";
 
@@ -64,12 +65,12 @@ export default function LogScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 110 }}
+        contentContainerStyle={{ paddingBottom: SPACE.scrollBottom }}
         showsVerticalScrollIndicator={false}
       >
         <PageHeader title="Your log" subtitle={dayLabel(selected)} />
 
-        <View className="px-5 pt-2 space-y-4">
+        <View className="px-5 pt-3 space-y-island">
           {/* Week Selector Strip */}
           <Card className="p-3">
             <View className="flex-row items-center justify-between mb-2 px-1">
@@ -131,18 +132,18 @@ export default function LogScreen() {
           </Card>
 
           {/* Log Entries Timeline */}
-          {dayEntries.length === 0 ? (
+          {readings.length === 0 && meds.length === 0 ? (
             <Card className="p-8 items-center justify-center">
               <Text className="text-4xl mb-2">📝</Text>
               <Text className="font-serif text-lg font-bold text-foreground text-center">
-                No readings logged for this day
+                No readings logged yet
               </Text>
               <Text className="mt-1 font-sans text-xs text-muted-foreground text-center">
-                Tap the + button below to record a reading or medication.
+                Start by logging your first reading or medication.
               </Text>
             </Card>
           ) : (
-            <View className="space-y-3">
+            <View className="space-y-island">
               {dayEntries.map((e) => (
                 <EntryItem key={e.item.id} entry={e} />
               ))}

@@ -1,12 +1,50 @@
-import { Stack } from 'expo-router';
+import { Stack, usePathname, useRouter } from 'expo-router';
+import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { useColorScheme } from 'nativewind';
 import { useFonts } from 'expo-font';
 import { Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import { Fraunces_400Regular, Fraunces_500Medium, Fraunces_600SemiBold, Fraunces_700Bold } from '@expo-google-fonts/fraunces';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
-import { useColorScheme } from 'nativewind';
-import { IglooProvider } from '@lib/igloo-store';
+import { IglooProvider, useIgloo } from '@lib/igloo-store';
 import { AddModal } from '@components/igloo/AddModal';
+import { SignInScreen } from '@components/auth/SignInScreen';
+import { OnboardingScreen } from '@components/onboarding/OnboardingScreen';
 import '../global.css';
+
+function AppContent() {
+  const { authLoading, session, onboardingComplete } = useIgloo();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Redirect from unauthenticated paths to sign-in
+  if (!authLoading && !session && pathname !== '/(tabs)') {
+    router.replace('/signin');
+    return null;
+  }
+
+  if (authLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#186787" />
+      </View>
+    );
+  }
+
+  // No session → sign-in screen
+  if (!session) {
+    return <SignInScreen onSignedIn={() => {}} />;
+  }
+
+  // Session exists but onboarding not complete
+  if (!onboardingComplete) {
+    return <OnboardingScreen onComplete={() => router.replace('/(tabs)')} />;
+  }
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" />
+    </Stack>
+  );
+}
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -19,9 +57,9 @@ export default function RootLayout() {
     'Fraunces-SemiBold': Fraunces_600SemiBold,
     'Fraunces-Bold': Fraunces_700Bold,
   });
-  
+
   const { colorScheme, setColorScheme } = useColorScheme();
-  
+
   // Force light mode to match the web app design
   if (colorScheme !== 'light') {
     setColorScheme('light');
@@ -37,9 +75,7 @@ export default function RootLayout() {
 
   return (
     <IglooProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-      </Stack>
+      <AppContent />
       <AddModal />
     </IglooProvider>
   );

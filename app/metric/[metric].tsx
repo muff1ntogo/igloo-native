@@ -29,8 +29,9 @@ import {
   MetricIcon,
   Sparkline,
   Tortoise,
+  ZoneGauge,
 } from "@components/igloo";
-import { STATUS_HEX, STATUS_TINT, METRIC_HEX, METRIC_TINT } from "@lib/tokens";
+import { STATUS_HEX, STATUS_TINT, METRIC_HEX, METRIC_TINT, SPACE } from "@lib/tokens";
 
 export default function MetricDetailScreen() {
   const router = useRouter();
@@ -76,12 +77,12 @@ export default function MetricDetailScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 110 }}
+        contentContainerStyle={{ paddingBottom: SPACE.scrollBottom }}
         showsVerticalScrollIndicator={false}
       >
-        <View className="px-5 pt-4 space-y-4">
+        <View className="px-5 pt-4 space-y-island">
           {/* Latest Reading Card */}
-          <Card className="p-5">
+          <Card className="p-card-pad">
             <View className="flex-row items-center justify-between">
               <Text className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Latest Reading
@@ -100,6 +101,11 @@ export default function MetricDetailScreen() {
               </Text>
             </View>
           </Card>
+
+          {/* Reference-range gauge — zone bands + current-reading marker +
+              outlined personal target band. Reads from existing zone/target
+              data in igloo-metric-detail.ts. */}
+          <ZoneGauge metric={m} current={current} />
 
           {/* Time Range Selector */}
           <View className="flex-row justify-between bg-card rounded-2xl p-1 border border-border">
@@ -123,7 +129,7 @@ export default function MetricDetailScreen() {
           </View>
 
           {/* Trend Chart Card */}
-          <Card className="p-4">
+          <Card className="p-card-pad">
             <View className="flex-row items-center justify-between mb-2">
               <Text className="font-sans text-sm font-bold text-foreground">
                 Trend ({RANGE_LABEL[range]})
@@ -133,12 +139,12 @@ export default function MetricDetailScreen() {
               </Text>
             </View>
             <View className="py-2">
-              <Sparkline data={series} metric={m} height={120} />
+              <Sparkline data={series} metric={m} height={120} variant="detailed" />
             </View>
           </Card>
 
           {/* About Metric */}
-          <Card className="p-4 space-y-2">
+          <Card className="p-card-pad space-y-2">
             <Text className="font-sans text-sm font-bold text-foreground">
               About {meta.label}
             </Text>
@@ -148,7 +154,7 @@ export default function MetricDetailScreen() {
           </Card>
 
           {/* Guidance & Tips */}
-          <Card className="p-4 space-y-3">
+          <Card className="p-card-pad space-y-3">
             <Text className="font-sans text-sm font-bold text-foreground">
               Tips for accurate readings
             </Text>

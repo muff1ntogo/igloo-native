@@ -1,5 +1,5 @@
 import { View } from "react-native";
-import Svg, { Path, Circle } from "react-native-svg";
+import Svg, { Path, Circle, Line } from "react-native-svg";
 import type { MetricKey } from "@lib/igloo-data";
 import { METRIC_HEX } from "@lib/tokens";
 import { cn } from "@lib/utils";
@@ -9,6 +9,14 @@ interface SparklineProps {
   metric: MetricKey;
   className?: string;
   height?: number;
+  /**
+   * "minimal" (default) — thin ~2px line, tiny dot, very faint fill.
+   *                Used for the small inline charts on the Dashboard cards.
+   * "detailed"     — same thin line in the metric's own colour, plus light,
+   *                  minimal horizontal gridlines. Used for the Metric
+   *                  Detail trend chart. No heavy area fill, no bold dots.
+   */
+  variant?: "minimal" | "detailed";
 }
 
 export function Sparkline({
@@ -16,6 +24,7 @@ export function Sparkline({
   metric,
   className,
   height = 56,
+  variant = "minimal",
 }: SparklineProps) {
   if (!data || data.length === 0) return null;
 
@@ -24,9 +33,14 @@ export function Sparkline({
   const max = Math.max(...data);
   const span = max - min || 1;
 
+  // Plot within the viewBox vertically, leaving a little headroom top/bottom.
+  const topPad = 3;
+  const bottomPad = 3;
+  const plotH = 30 - topPad - bottomPad;
+
   const pts = data.map((v, i) => {
     const x = (i / (data.length - 1)) * 100;
-    const y = 30 - ((v - min) / span) * 24 - 3;
+    const y = topPad + (1 - (v - min) / span) * plotH;
     return [x, y] as const;
   });
 
@@ -37,6 +51,11 @@ export function Sparkline({
   const area = `${line} L100 30 L0 30 Z`;
   const last = pts[pts.length - 1] ?? ([0, 0] as const);
 
+  const isDetailed = variant === "detailed";
+  // Thin stroke for both variants; minimal dot in the detailed view.
+  const strokeWidth = 2;
+  const gridlines = [0.25, 0.5, 0.75];
+
   return (
     <View className={cn("w-full justify-center", className)} style={{ height }}>
       <Svg
@@ -45,16 +64,37 @@ export function Sparkline({
         style={{ width: "100%", height }}
         aria-hidden={true}
       >
-        <Path d={area} fill={color} fillOpacity={0.12} />
+        {/* Light, minimal horizontal gridlines — only in the detailed view */}
+        {isDetailed
+          ? gridlines.map((g) => (
+              <Line
+                key={g}
+                x1="0"
+                y1={(topPad + g * plotH).toFixed(2)}
+                x2="100"
+                y2={(topPad + g * plotH).toFixed(2)}
+                stroke="#DCEAEE"
+                strokeWidth="0.4"
+                strokeDasharray="2 2"
+              />
+            ))
+          : null}
+
+        {/* Very faint area fill (kept subtle per the minimal spec) */}
+        <Path d={area} fill={color} fillOpacity={isDetailed ? 0.05 : 0.08} />
+
+        {/* Thin line in the metric's own colour */}
         <Path
           d={line}
           fill="none"
           stroke={color}
-          strokeWidth="2"
+          strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeLinejoin="round"
         />
-        <Circle cx={last[0]} cy={last[1]} r="2" fill={color} />
+
+        {/* Small subtle end dot — smaller in the detailed view */}
+        <Circle cx={last[0]} cy={last[1]} r={isDetailed ? 1.2 : 1.6} fill={color} />
       </Svg>
     </View>
   );

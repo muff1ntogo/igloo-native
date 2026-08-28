@@ -27,7 +27,7 @@ export function VitalsGrid({ latest, mode }: VitalsGridProps) {
   const router = useRouter();
 
   return (
-    <View className="gap-3">
+    <View className="gap-island">
       {METRIC_ORDER.map((m) => {
         const reading = latest[m];
         const meta = METRICS[m];
@@ -45,9 +45,9 @@ export function VitalsGrid({ latest, mode }: VitalsGridProps) {
               })
             }
           >
-            <Card className="p-4">
+            <Card className="p-card-pad">
               <View className="flex-row items-center justify-between">
-                <View className="flex-row items-center gap-3">
+                <View className="flex-row items-center gap-row-gap">
                   <MetricIcon metric={m} />
                   <View>
                     <Text className="font-sans text-sm font-bold text-foreground">

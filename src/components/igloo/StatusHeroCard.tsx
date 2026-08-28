@@ -31,8 +31,8 @@ export function StatusHeroCard({ overall, mode, setMode }: StatusHeroCardProps) 
   const meta = STATUS_TEXTS[overall];
 
   return (
-    <Card style={{ backgroundColor: STATUS_TINT[overall] }} className="p-5">
-      <View className="flex-row items-center gap-4">
+    <Card style={{ backgroundColor: STATUS_TINT[overall] }} className="p-card-pad">
+      <View className="flex-row items-center gap-row-gap">
         <Tortoise status={overall} size="md" />
         <View className="flex-1">
           <StatusBadge status={overall} />
@@ -46,7 +46,7 @@ export function StatusHeroCard({ overall, mode, setMode }: StatusHeroCardProps) 
       </View>
 
       {/* Mode Switcher */}
-      <View className="mt-4 flex-row items-center justify-between border-t border-border/50 pt-3">
+      <View className="mt-4 flex-row items-center justify-between border-t border-border/50 pt-island">
         <Text className="font-sans text-xs font-semibold text-muted-foreground">
           Card details
         </Text>

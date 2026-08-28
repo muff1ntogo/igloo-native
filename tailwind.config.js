@@ -65,6 +65,15 @@ module.exports = {
         "4xl": "36px",
         card: "22px",
       },
+      // Centralized spacing scale (see src/lib/tokens.ts SPACE).
+      // Lets layouts use semantic spacing instead of ad-hoc per-screen values.
+      spacing: {
+        "card-pad": "20px",   // inner padding of a Card
+        "row-gap": "12px",    // icon ↔ label gap inside a row
+        island: "16px",      // gap between stacked cards
+        section: "24px",      // gap between major sections
+        "scroll-bottom": "140px", // scroll content bottom padding (clears tab bar)
+      },
     },
   },
   plugins: [],

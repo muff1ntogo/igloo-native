@@ -17,7 +17,7 @@ export function PageHeader({
   return (
     <View
       className={cn(
-        "flex-row items-center justify-between px-5 pt-4 pb-2",
+        "flex-row items-center justify-between px-5 pb-3",
         className,
       )}
     >

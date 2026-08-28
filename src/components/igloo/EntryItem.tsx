@@ -14,7 +14,7 @@ export function EntryItem({ entry }: { entry: Entry }) {
   if (entry.kind === "medication") {
     const m = entry.item;
     return (
-      <View className="flex-row items-center rounded-card bg-primary p-4 shadow-sm">
+      <View className="flex-row items-center rounded-card bg-primary p-card-pad shadow-sm">
         <View className="size-10 rounded-full bg-white/20 items-center justify-center mr-3">
           <Pill size={20} color="#FFFFFF" />
         </View>
@@ -37,8 +37,8 @@ export function EntryItem({ entry }: { entry: Entry }) {
   const meta = METRICS[r.metric];
 
   return (
-    <Card className="p-4 flex-row items-center justify-between">
-      <View className="flex-row items-center gap-3 flex-1">
+    <Card className="p-card-pad flex-row items-center justify-between">
+      <View className="flex-row items-center gap-row-gap flex-1">
         <MetricIcon metric={r.metric} />
         <View className="flex-1">
           <Text className="font-sans text-sm font-bold text-foreground">

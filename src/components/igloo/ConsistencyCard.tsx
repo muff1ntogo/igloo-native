@@ -10,7 +10,7 @@ interface ConsistencyCardProps {
 
 export function ConsistencyCard({ week, measurementDays }: ConsistencyCardProps) {
   return (
-    <Card className="p-4 mt-2">
+    <Card className="p-card-pad mt-island">
       <View className="flex-row items-center justify-between mb-3">
         <Text className="font-sans text-sm font-bold text-foreground">
           Logging Consistency
