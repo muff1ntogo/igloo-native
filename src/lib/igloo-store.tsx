@@ -1,4 +1,4 @@
-﻿import {
+import {
   createContext,
   useContext,
   useMemo,
@@ -25,6 +25,8 @@ type Store = {
   session: import("@supabase/supabase-js").Session | null;
   user: import("@supabase/supabase-js").User | null;
   authLoading: boolean;
+  profileReady: boolean;
+  profileLoading: boolean;
   readings: Reading[];
   readingsLoading: boolean;
   addReading: (r: Omit<Reading, "id">) => Promise<void>;
@@ -54,7 +56,17 @@ type Store = {
     healthAppStatus: DeviceConnectionStatus;
   };
   setPreferences: (patch: Partial<Store["preferences"]>) => void;
+  familyConnections: Array<{ inviteeId: string; relation: string; inviteeName: string; inviteeInitials: string }>;
+  familyLoading: boolean;
+  inviteFamily: (email: string, relation: string) => Promise<{ success: boolean; error?: string }>;
+  removeFamily: (inviteeId: string) => Promise<void>;
 };
+
+export function worstStatus(statuses: (Status | undefined)[]): Status {
+  if (statuses.some((s) => s === "urgent")) return "urgent";
+  if (statuses.some((s) => s === "watch")) return "watch";
+  return "good";
+}
 
 const IglooContext = createContext<Store | null>(null);
 
@@ -93,6 +105,10 @@ export function IglooProvider({ children }: { children: ReactNode }) {
   });
   const [onboardingComplete, setOnboardingComplete] = useState(false);
   const [wantsHealthSync, setWantsHealthSync] = useState(false);
+  const [profileReady, setProfileReady] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [familyConnections, setFamilyConnections] = useState<Array<{ inviteeId: string; relation: string; inviteeName: string; inviteeInitials: string }>>([]);
+  const [familyLoading, setFamilyLoading] = useState(false);
   const [preferences, setPreferences] =
     useState<Store["preferences"]>(DEFAULT_PREFERENCES);
 
@@ -149,6 +165,24 @@ export function IglooProvider({ children }: { children: ReactNode }) {
       .select("name, dob")
       .eq("id", user.id)
       .single()
+      .then(
+        ({ data, error }) => {
+          if (error) { console.warn("[Igloo] Load profile error:", error.message); return; }
+          if (data) {
+            setProfile(data);
+            if (!data.dob) setOnboardingComplete(false);
+            else setOnboardingComplete(true);
+          }
+        },
+        (error) => { console.warn("[Igloo] Load profile error:", error.message); }
+      );
+    Promise.resolve()
+      .then(() => supabase
+        .from("profiles")
+        .select("name, dob")
+        .eq("id", user.id)
+        .single()
+      )
       .then(({ data, error }) => {
         if (error) { console.warn("[Igloo] Load profile error:", error.message); return; }
         if (data) {
@@ -156,8 +190,10 @@ export function IglooProvider({ children }: { children: ReactNode }) {
           if (!data.dob) setOnboardingComplete(false);
           else setOnboardingComplete(true);
         }
-      });
-  }, [user?.id]);
+      })
+      .catch((error) => { console.warn("[Igloo] Load profile error:", error.message); })
+      .finally(() => { setProfileReady(true); setProfileLoading(false); });
+  });
 
   const loadReadings = useCallback(async (userId: string) => {
     setReadingsLoading(true);
@@ -165,7 +201,6 @@ export function IglooProvider({ children }: { children: ReactNode }) {
       .from("readings")
       .select("*")
       .eq("user_id", userId)
-      .order("at", { ascending: false });
     setReadingsLoading(false);
     if (error) { console.warn("[Igloo] Load readings error:", error.message); return; }
     setReadings((data ?? []).map((r) => ({
@@ -194,6 +229,30 @@ export function IglooProvider({ children }: { children: ReactNode }) {
     loadReadings(user.id);
     loadMeds(user.id);
   }, [user?.id, loadReadings, loadMeds]);
+
+  const loadFamily = useCallback(async () => {
+    if (!user?.id) { setFamilyConnections([]); setFamilyLoading(false); return; }
+    setFamilyLoading(true);
+    const { data: conns, error: connErr } = await supabase
+      .from("family_connections")
+      .select("invitee_id, relation")
+      .eq("inviter_id", user.id);
+    if (connErr) { console.warn("[Igloo] Load family:", connErr.message); setFamilyLoading(false); return; }
+    if (!conns || conns.length === 0) { setFamilyConnections([]); setFamilyLoading(false); return; }
+    const ids = conns.map((x) => x.invitee_id);
+    const { data: profiles } = await supabase.from("profiles").select("id, name").in("id", ids);
+    const map: Record<string, string> = {};
+    (profiles ?? []).forEach((p: { id: string; name: string }) => { map[p.id] = p.name; });
+    setFamilyConnections(conns.map((x) => ({
+      inviteeId: x.invitee_id,
+      relation: x.relation,
+      inviteeName: map[x.invitee_id] ?? "Unknown",
+      inviteeInitials: (map[x.invitee_id] ?? "U").split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2),
+    })));
+    setFamilyLoading(false);
+  }, [user?.id]);
+
+  useEffect(() => { loadFamily(); }, [loadFamily]);
 
   const addReading = useCallback(async (r: Omit<Reading, "id">) => {
     if (!user?.id) return;
@@ -230,20 +289,56 @@ export function IglooProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<Store>(() => ({
-    session, user, authLoading,
+    session, user, authLoading, profileReady, profileLoading,
     readings, readingsLoading, addReading,
     meds, medsLoading, addMed,
     simpleView, setSimpleView,
-    shared, toggleShared: (m) => setShared((p) => ({ ...p, [m]: !p[m] })),
+    shared,
+    toggleShared: async (m) => {
+      const current = shared[m];
+      setShared((p) => ({ ...p, [m]: !p[m] }));
+      if (!user?.id || familyConnections.length === 0) return;
+      const { error } = await supabase
+        .from("sharing_permissions")
+        .upsert(familyConnections.map((fc) => ({
+          inviter_id: user.id,
+          family_id: fc.inviteeId,
+          metric: m,
+          shared: !current,
+        })), { onConflict: "inviter_id,family_id,metric" });
+      if (error) console.warn("[Igloo] Toggle shared:", error.message);
+    },
     alertDismissed, dismissAlert: () => setAlertDismissed(true),
     addOpen, setAddOpen: (v) => { if (!v) setAddSlot(null); setAddOpen(v); },
     addSlot, openAdd: (slot) => { setAddSlot(slot ?? null); setAddOpen(true); },
     profile, setProfile,
     onboardingComplete, setOnboardingComplete,
     wantsHealthSync,
+    familyConnections,
+    familyLoading,
+    inviteFamily: async (email, relation) => {
+      if (!user?.id) return { success: false, error: "Not authenticated" };
+      const { data: uid } = await supabase.rpc("find_user_id_by_email", { lookup_email: email });
+      if (!uid) return { success: false, error: "No Igloo account with that email" };
+      const { error: e1 } = await supabase.from("family_connections").insert({ inviter_id: user.id, invitee_id: uid, relation });
+      if (e1) return { success: false, error: e1.message };
+      const { error: e2 } = await supabase.from("sharing_permissions").upsert(
+        METRIC_ORDER.map((m) => ({ inviter_id: user.id, family_id: uid, metric: m, shared: shared[m] ?? true })),
+        { onConflict: "inviter_id,family_id,metric" }
+      );
+      if (e2) console.warn("[Igloo] Seed permissions:", e2.message);
+      await loadFamily();
+      return { success: true };
+    },
+    removeFamily: async (inviteeId) => {
+      if (!user?.id) return;
+      await supabase.from("family_connections").delete().match({ inviter_id: user.id, invitee_id: inviteeId });
+      await supabase.from("sharing_permissions").delete().match({ inviter_id: user.id, family_id: inviteeId });
+      setFamilyConnections((prev) => prev.filter((fc) => fc.inviteeId !== inviteeId));
+    },
     signOut,
     preferences, setPreferences: (patch) => setPreferences((p) => ({ ...p, ...patch })),
-  }), [session, user, authLoading, readings, readingsLoading, addReading, meds, medsLoading, addMed, simpleView, shared, alertDismissed, addOpen, addSlot, profile, onboardingComplete, wantsHealthSync, signOut, preferences]);
+  }), [session, user, authLoading, profileReady, profileLoading, readings, readingsLoading, addReading, meds, medsLoading, addMed, simpleView, shared, alertDismissed, addOpen, addSlot, profile, onboardingComplete, wantsHealthSync, signOut, preferences, familyConnections, loadFamily]);
 
   return <IglooContext.Provider value={value}>{children}</IglooContext.Provider>;
 }
@@ -261,10 +356,4 @@ export function useLatest() {
     for (const m of METRIC_ORDER) out[m] = readings.find((r) => r.metric === m);
     return out;
   }, [readings]);
-}
-
-export function worstStatus(list: (Status | undefined)[]): Status {
-  if (list.includes("urgent")) return "urgent";
-  if (list.includes("watch")) return "watch";
-  return "good";
 }

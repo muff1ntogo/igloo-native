@@ -18,6 +18,7 @@ import { BigNumber } from "./BigNumber";
 import { MetricIcon } from "./MetricIcon";
 import { Sparkline } from "./Sparkline";
 
+// TODO(real-data): compute from real readings instead of hardcoded DELTAS/TRENDS
 interface VitalsGridProps {
   latest: Record<MetricKey, Reading | undefined>;
   mode: "delta" | "status";

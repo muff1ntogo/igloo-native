@@ -10,6 +10,7 @@ create table if not exists public.profiles (
   id         uuid references auth.users on delete cascade primary key,
   name       text not null,
   dob        text,
+  wants_health_sync boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -149,8 +150,8 @@ create trigger set_updated_at
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, name, dob)
-  values (new.id, '', '');
+  insert into public.profiles (id, name, dob, wants_health_sync)
+  values (new.id, '', '', false);
   return new;
 end;
 $$ language plpgsql security definer;
@@ -158,3 +159,27 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- =====================================================
+-- Helper function for family tab (item 4)
+-- Needed because auth.users is not directly queryable by
+-- email from the client. A security definer function is
+-- the standard safe pattern for this lookup.
+-- MUST be run against the live Supabase project's SQL editor
+-- before wiring up family.tsx.
+-- =====================================================
+create or replace function public.find_user_id_by_email(lookup_email text)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  found_id uuid;
+begin
+  select id into found_id from auth.users where email = lookup_email limit 1;
+  return found_id;
+end;
+$$;
+
+grant execute on function public.find_user_id_by_email(text) to authenticated;

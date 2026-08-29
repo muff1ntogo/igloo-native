@@ -10,20 +10,23 @@ import '../global.css';
 import { useEffect } from 'react';
 
 function AppContent() {
-  const { authLoading, session, onboardingComplete } = useIgloo();
+  const { authLoading, profileReady, profileLoading, user, onboardingComplete } = useIgloo();
   const router = useRouter();
 
-  // Once auth resolves, redirect to the correct screen based on state
+  // Only route once BOTH auth AND profile queries have resolved.
+  // Without profileReady, we'd route on the first auth tick before we know
+  // whether the user has a profile → wrong page.
+  // Without profileLoading, we might route before the real onboarding state (dob) is known.
   useEffect(() => {
-    if (authLoading) return;
-    if (!session) {
+    if (authLoading || !profileReady || profileLoading) return;
+    if (!user) {
       router.replace('/splash');
     } else if (!onboardingComplete) {
       router.replace('/onboarding');
     } else {
       router.replace('/(tabs)');
     }
-  }, [session, onboardingComplete, authLoading, router]);
+  }, [user, onboardingComplete, authLoading, profileReady, profileLoading, router]);
 
   if (authLoading) {
     return (
@@ -61,10 +64,12 @@ export default function RootLayout() {
 
   const { colorScheme, setColorScheme } = useColorScheme();
 
-  // Force light mode to match the web app design
-  if (colorScheme !== 'light') {
-    setColorScheme('light');
-  }
+  // Force light mode to match the web app design — run once on mount.
+  useEffect(() => {
+    if (colorScheme !== 'light') {
+      setColorScheme('light');
+    }
+  }, []);
 
   if (!fontsLoaded) {
     return (

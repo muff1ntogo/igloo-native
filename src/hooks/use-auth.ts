@@ -154,6 +154,13 @@ export function useProfile() {
   const [wantsHealthSync, setWantsHealthSync] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Keep a ref to the current user so upsert always reads the live value,
+  // not a stale one from a closure captured when user was null.
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   useEffect(() => {
     if (!user?.id) {
       setProfile(null);
@@ -169,11 +176,20 @@ export function useProfile() {
           .select("name, dob, wants_health_sync")
           .eq("id", user.id)
           .single();
-        if (error) throw error;
-        setProfile(data?.name ? data : null);
-        setWantsHealthSync(data?.wants_health_sync ?? false);
+        if (error) {
+          // .single() returns this error when 0 rows exist (new user) — silently ignore
+          if (error.message !== "Cannot coerce the result to a single JSON object") {
+            console.warn("[Igloo] Load profile:", error.message);
+          }
+          setProfile(null);
+          setWantsHealthSync(false);
+        } else {
+          setProfile(data?.name ? data : null);
+          setWantsHealthSync(data?.wants_health_sync ?? false);
+        }
       } catch (e) {
         console.warn("[Igloo] Load profile error:", e);
+        setProfile(null);
       } finally {
         setLoading(false);
       }
@@ -182,30 +198,32 @@ export function useProfile() {
 
   const upsert = useCallback(
     async (patch: { name?: string; dob?: string }) => {
-      if (!user?.id) return;
+      const currentUser = userRef.current;
+      if (!currentUser?.id) throw new Error("Not authenticated. Please log in again.");
       const { error } = await supabase
         .from("profiles")
-        .upsert({ id: user.id, ...patch }, { onConflict: "id" })
-        .single();
+        .upsert({ id: currentUser.id, ...patch }, { onConflict: "id" });
       if (error) throw error;
       setProfile((prev) => ({
         name: patch.name ?? prev?.name ?? "",
         dob: patch.dob ?? prev?.dob ?? "",
       }));
     },
-    [user?.id],
+    [], // no dependency on user — always reads from userRef
   );
 
   const setHealthSync = useCallback(
     async (value: boolean) => {
-      if (!user?.id) return;
+      const currentUser = userRef.current;
+      if (!currentUser?.id) return;
       const { error } = await supabase
         .from("profiles")
-        .upsert({ id: user.id, wants_health_sync: value }, { onConflict: "id" });
+        .update({ wants_health_sync: value })
+        .eq("id", currentUser.id);
       if (error) throw error;
       setWantsHealthSync(value);
     },
-    [user?.id],
+    [],
   );
 
   return { profile, loading: loading || !user, upsert, setHealthSync, wantsHealthSync, user };

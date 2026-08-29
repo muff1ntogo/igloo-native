@@ -44,10 +44,7 @@ const GROUPS: Group[] = [
   },
   {
     title: "Connected apps",
-    rows: [
-      { icon: Watch, label: "Wrist monitor", hint: "Connected", sheetKey: "wrist-monitor" },
-      { icon: Smartphone, label: "Health app", hint: "Syncing", sheetKey: "health-app" },
-    ],
+    rows: [] as RowItem[],
   },
   {
     title: "Support",
@@ -59,10 +56,35 @@ const GROUPS: Group[] = [
 ];
 
 export default function ProfileScreen() {
-  const { simpleView, setSimpleView, profile, signOut } = useIgloo();
+  const { simpleView, setSimpleView, profile, signOut, preferences } = useIgloo();
   const [sheetKey, setSheetKey] = useState<string | null>(null);
   const openSheet = (key: string) => setSheetKey(key);
   const closeSheet = () => setSheetKey(null);
+
+  const connectedAppsRows: RowItem[] = [
+    {
+      icon: Watch,
+      label: "Wrist monitor",
+      hint:
+        preferences.wristMonitorStatus === "connected"
+          ? "Connected"
+          : preferences.wristMonitorStatus === "syncing"
+            ? "Syncing"
+            : "Not connected",
+      sheetKey: "wrist-monitor",
+    },
+    {
+      icon: Smartphone,
+      label: "Health app",
+      hint:
+        preferences.healthAppStatus === "connected"
+          ? "Connected"
+          : preferences.healthAppStatus === "syncing"
+            ? "Syncing"
+            : "Not connected",
+      sheetKey: "health-app",
+    },
+  ];
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
@@ -79,28 +101,31 @@ export default function ProfileScreen() {
               <IglooToggle checked={simpleView} onChange={setSimpleView} label="Toggle Simple view" />
             </View>
           </Card>
-          {GROUPS.map((g) => (
-            <View key={g.title} className="space-y-2 mt-2">
-              <Text className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">{g.title}</Text>
-              <Card className="divide-y divide-border/60">
-                {g.rows.map((r) => {
-                  const Icon = r.icon;
-                  return (
-                    <TouchableOpacity key={r.label} onPress={() => openSheet(r.sheetKey)} className="flex-row items-center justify-between p-4 active:bg-muted/40">
-                      <View className="flex-row items-center gap-3 flex-1">
-                        <View className="size-9 rounded-full bg-primary-tint items-center justify-center"><Icon size={18} color="#186787" /></View>
-                        <Text className="font-sans text-sm font-semibold text-foreground">{r.label}</Text>
-                      </View>
-                      <View className="flex-row items-center gap-2">
-                        {r.hint ? <Text className="font-sans text-xs font-semibold text-muted-foreground">{r.hint}</Text> : null}
-                        <ChevronRight size={18} color="#5C7E8C" />
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </Card>
-            </View>
-          ))}
+          {GROUPS.map((g) => {
+            const rows = g.title === "Connected apps" ? connectedAppsRows : g.rows;
+            return (
+              <View key={g.title} className="space-y-2 mt-2">
+                <Text className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">{g.title}</Text>
+                <Card className="divide-y divide-border/60">
+                  {rows.map((r) => {
+                    const Icon = r.icon;
+                    return (
+                      <TouchableOpacity key={r.label} onPress={() => openSheet(r.sheetKey)} className="flex-row items-center justify-between p-4 active:bg-muted/40">
+                        <View className="flex-row items-center gap-3 flex-1">
+                          <View className="size-9 rounded-full bg-primary-tint items-center justify-center"><Icon size={18} color="#186787" /></View>
+                          <Text className="font-sans text-sm font-semibold text-foreground">{r.label}</Text>
+                        </View>
+                        <View className="flex-row items-center gap-2">
+                          {r.hint ? <Text className="font-sans text-xs font-semibold text-muted-foreground">{r.hint}</Text> : null}
+                          <ChevronRight size={18} color="#5C7E8C" />
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </Card>
+              </View>
+            );
+          })}
           <TouchableOpacity
             onPress={async () => {
               await signOut();

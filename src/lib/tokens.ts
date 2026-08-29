@@ -18,10 +18,10 @@ import type { MetricKey, Status } from "./igloo-data";
 export const SPACE = {
   xs: 4,
   sm: 8,
-  rowGap: 12,
-  cardPad: 20,
-  island: 16,
-  section: 24,
+  rowGap: 16,
+  cardPad: 24,
+  island: 24,
+  section: 32,
   scrollBottom: 140,
 } as const;
 

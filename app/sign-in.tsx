@@ -2,7 +2,9 @@ import { useState, useCallback } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { ArrowLeft } from "lucide-react-native";
 import { useAuth } from "@hooks/use-auth";
+import { KeyboardDismissView } from "@components/igloo";
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -23,7 +25,8 @@ export default function SignInScreen() {
     setError(null);
     try {
       await signInWithPassword(e, p);
-      router.replace("/(tabs)");
+      // Do NOT redirect here — let app/_layout.tsx decide the destination
+      // based on session + onboardingComplete (same as every other auth state change).
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Sign-in failed.");
     } finally {
@@ -32,8 +35,16 @@ export default function SignInScreen() {
   }, [email, password, signInWithPassword, router]);
 
   return (
+    <KeyboardDismissView style={{ flex: 1 }}>
     <SafeAreaView className="flex-1 bg-background px-8 justify-center">
-      <View className="items-center mb-8">
+      {/* Back arrow */}
+      <TouchableOpacity
+        onPress={() => router.back()}
+        className="absolute top-4 left-4 size-10 rounded-full bg-card items-center justify-center border border-border"
+      >
+        <ArrowLeft size={20} color="#123247" />
+      </TouchableOpacity>
+      <View className="items-center mb-8 mt-8">
         <Text className="font-serif text-3xl font-bold text-foreground">Welcome back</Text>
         <Text className="mt-2 font-sans text-sm text-muted-foreground text-center leading-relaxed">
           Log in to continue to Igloo
@@ -90,5 +101,6 @@ export default function SignInScreen() {
         </TouchableOpacity>
       </View>
     </SafeAreaView>
+    </KeyboardDismissView>
   );
 }

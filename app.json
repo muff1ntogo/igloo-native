@@ -8,7 +8,8 @@
     "userInterfaceStyle": "light",
     "plugins": [
       "expo-router",
-      "expo-font"
+      "expo-font",
+      "react-native-health"
     ],
     "extra": {
       "SUPABASE_URL": "https://cziwfcbslrlnnkptwnbr.supabase.co",

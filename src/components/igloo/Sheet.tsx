@@ -9,6 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { X } from "lucide-react-native";
+import { NativeDatePicker } from "./NativeDatePicker";
 
 interface SheetProps {
   visible: boolean;
@@ -86,70 +87,15 @@ interface DateSelectorProps {
   onSelect: (date: string) => void;
 }
 
-export function DateSelector({ selected }: DateSelectorProps) {
-  const [month, setMonth] = useState(2);
-  const [day, setDay] = useState(15);
-  const [year, setYear] = useState(1952);
-
-  const months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
-  ];
-
-  useEffect(() => {
-    const m = selected.match(/(\w+)\s+(\d+),\s+(\d+)/);
-    if (m) {
-      const mi = months.indexOf(m[1]);
-      if (mi >= 0) { setMonth(mi); setDay(Number(m[2])); setYear(Number(m[3])); }
-    }
-  }, [selected]);
-
-  const formatDisplay = () => `${months[month]} ${day}, ${year}`;
-
+export function DateSelector({ selected, onSelect }: DateSelectorProps) {
   return (
-    <View>
-      <View className="flex-row items-center justify-center gap-3 py-4">
-        <TouchableOpacity onPress={() => setMonth((m) => (m - 1 + 12) % 12)} className="p-2 rounded-full bg-muted/40">
-          <X size={16} color="#5C7E8C" />
-        </TouchableOpacity>
-        <View className="bg-primary-tint/60 rounded-xl px-4 py-3 items-center min-w-[80px]">
-          <Text className="font-sans text-xs text-muted-foreground font-semibold uppercase tracking-wider">Month</Text>
-          <Text className="font-serif text-lg font-bold text-foreground">{months[month]}</Text>
-        </View>
-        <TouchableOpacity onPress={() => setMonth((m) => (m + 1) % 12)} className="p-2 rounded-full bg-muted/40">
-          <Text className="font-serif text-lg font-bold text-primary">›</Text>
-        </TouchableOpacity>
-      </View>
-      <View className="flex-row items-center justify-center gap-3 py-2">
-        <TouchableOpacity onPress={() => setDay((d) => Math.max(1, d - 1))} className="p-2 rounded-full bg-muted/40">
-          <X size={16} color="#5C7E8C" />
-        </TouchableOpacity>
-        <View className="bg-primary-tint/60 rounded-xl px-4 py-3 items-center min-w-[60px]">
-          <Text className="font-sans text-xs text-muted-foreground font-semibold uppercase tracking-wider">Day</Text>
-          <Text className="font-serif text-lg font-bold text-foreground">{day}</Text>
-        </View>
-        <TouchableOpacity onPress={() => setDay((d) => Math.min(31, d + 1))} className="p-2 rounded-full bg-muted/40">
-          <Text className="font-serif text-lg font-bold text-primary">›</Text>
-        </TouchableOpacity>
-      </View>
-      <View className="flex-row items-center justify-center gap-3 py-2">
-        <TouchableOpacity onPress={() => setYear((y) => y - 1)} className="p-2 rounded-full bg-muted/40">
-          <X size={16} color="#5C7E8C" />
-        </TouchableOpacity>
-        <View className="bg-primary-tint/60 rounded-xl px-4 py-3 items-center min-w-[90px]">
-          <Text className="font-sans text-xs text-muted-foreground font-semibold uppercase tracking-wider">Year</Text>
-          <Text className="font-serif text-lg font-bold text-foreground">{year}</Text>
-        </View>
-        <TouchableOpacity onPress={() => setYear((y) => y + 1)} className="p-2 rounded-full bg-muted/40">
-          <Text className="font-serif text-lg font-bold text-primary">›</Text>
-        </TouchableOpacity>
-      </View>
-      <View className="mt-4 px-4 py-3 bg-primary/10 rounded-xl items-center">
-        <Text className="font-sans text-sm font-semibold text-primary">{formatDisplay()}</Text>
-      </View>
-    </View>
+    <NativeDatePicker
+      selectedDate={selected}
+      onSelect={onSelect}
+    />
   );
 }
 
 export type { SheetProps, RadioOption, OptionRowProps, DateSelectorProps };
+export { NativeDatePicker };
 

@@ -1,16 +1,20 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Text, TextInput, TouchableOpacity, View, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { ArrowLeft } from "lucide-react-native";
 import { useProfile } from "@hooks/use-auth";
 import { useIgloo } from "@lib/igloo-store";
+import { NativeDatePicker, KeyboardDismissView } from "@components/igloo";
+import { useHealthConnect } from "@hooks/use-health-connect";
 
 type Step = "personal" | "health" | "done";
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { upsert, setHealthSync } = useProfile();
-  const { setOnboardingComplete } = useIgloo();
+  const { upsert } = useProfile();
+  const { setOnboardingComplete, setPreferences } = useIgloo();
+  const { status: healthStatus, connect: connectHealth } = useHealthConnect();
   const [step, setStep] = useState<Step>("personal");
   const [name, setName] = useState("");
   const [dob, setDob] = useState("");
@@ -18,13 +22,21 @@ export default function OnboardingScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (step === "done") {
+      setPreferences({
+        healthAppStatus: wantsHealth ? healthStatus : "not-connected",
+      });
+    }
+  }, [step, wantsHealth, healthStatus, setPreferences]);
+
   const handlePersonalNext = useCallback(() => {
     const n = name.trim();
     const d = dob.trim();
     if (!n) { setError("Please enter your name."); return; }
-    if (!d) { setError("Please enter your date of birth."); return; }
+    if (!d) { setError("Please select your date of birth."); return; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
-      setError("Please use the format YYYY-MM-DD (e.g. 1952-03-15).");
+      setError("Please use a valid date format.");
       return;
     }
     setError(null);
@@ -36,9 +48,9 @@ export default function OnboardingScreen() {
     setError(null);
     try {
       await upsert({ name: name.trim(), dob: dob.trim() });
-      // TODO: Wire up real HealthKit (iOS) / Health Connect (Android) permission call here.
-      //       This requires a custom dev client with the appropriate entitlements/plist entries.
-      await setHealthSync(wantsHealth);
+      if (wantsHealth) {
+        await connectHealth();
+      }
       setOnboardingComplete(true);
       setStep("done");
     } catch (e: unknown) {
@@ -46,17 +58,24 @@ export default function OnboardingScreen() {
     } finally {
       setSaving(false);
     }
-  }, [name, dob, wantsHealth, upsert, setHealthSync, setOnboardingComplete]);
+  }, [name, dob, wantsHealth, upsert, connectHealth, setOnboardingComplete]);
 
   const handleDashboard = useCallback(() => {
     router.replace("/(tabs)");
   }, [router]);
 
   return (
+    <KeyboardDismissView style={{ flex: 1 }}>
     <SafeAreaView className="flex-1 bg-background px-8 justify-center">
       {step === "personal" && (
         <View>
-          <View className="items-center mb-8">
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="absolute top-4 left-4 size-10 rounded-full bg-card items-center justify-center border border-border"
+          >
+            <ArrowLeft size={20} color="#123247" />
+          </TouchableOpacity>
+          <View className="items-center mb-8 mt-8">
             <Text className="font-serif text-2xl font-bold text-foreground">
               Lets set up your profile
             </Text>
@@ -78,18 +97,10 @@ export default function OnboardingScreen() {
             </View>
             <View>
               <Text className="font-sans text-sm font-semibold text-foreground mb-2">Date of birth</Text>
-              <TextInput
-                autoCapitalize="none"
-                keyboardType="numeric"
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#A3B8C2"
-                value={dob}
-                onChangeText={(v) => { setDob(v); setError(null); }}
-                className="h-14 rounded-2xl border border-border bg-card px-4 font-sans text-base text-foreground"
+              <NativeDatePicker
+                selectedDate={dob || undefined}
+                onSelect={(d) => { setDob(d); setError(null); }}
               />
-              <Text className="mt-1.5 font-sans text-xs text-muted-foreground">
-                Format: YYYY-MM-DD (e.g. 1952-03-15)
-              </Text>
             </View>
             {error ? (
               <Text className="font-sans text-sm text-urgent">{error}</Text>
@@ -130,6 +141,16 @@ export default function OnboardingScreen() {
                 Connect Health App
               </Text>
             </TouchableOpacity>
+            {wantsHealth && healthStatus !== "syncing" && (
+              <Text className="font-sans text-xs font-semibold text-muted-foreground px-1">
+                {healthStatus === "connected"
+                  ? "✓ Connected to Apple Health"
+                  : "Health data not available in this environment"}
+              </Text>
+            )}
+            {error ? (
+              <Text className="font-sans text-sm text-urgent">{error}</Text>
+            ) : null}
             <TouchableOpacity
               onPress={handleHealthNext}
               disabled={saving}
@@ -174,5 +195,6 @@ export default function OnboardingScreen() {
         </View>
       )}
     </SafeAreaView>
+    </KeyboardDismissView>
   );
 }

@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { Text, View } from "react-native";
-import { Sheet, OptionRow, DateSelector } from "./Sheet";
+import { Sheet, OptionRow, NativeDatePicker } from "./Sheet";
 import { useIgloo } from "@lib/igloo-store";
+import { useProfile } from "@hooks/use-auth";
 
 interface ProfileSettingsProps {
   sheetKey: string | null;
@@ -10,6 +11,7 @@ interface ProfileSettingsProps {
 
 export function ProfileSettings({ sheetKey, onClose }: ProfileSettingsProps) {
   const { preferences, setPreferences, profile, setProfile } = useIgloo();
+  const { upsert } = useProfile();
 
   const textSizeOptions = [
     { value: "small", label: "Small" },
@@ -30,12 +32,20 @@ export function ProfileSettings({ sheetKey, onClose }: ProfileSettingsProps) {
     { value: "syncing", label: "Syncing..." },
   ];
 
+  const handleDobChange = useCallback(
+    (date: string) => {
+      setProfile({ ...profile, dob: date });
+      void upsert({ dob: date });
+    },
+    [profile, setProfile, upsert],
+  );
+
   return (
     <View>
       <Sheet visible={sheetKey === "dob"} onClose={onClose} title="Date of birth">
-        <DateSelector
-          selected={profile.dob}
-          onSelect={(date) => setProfile({ ...profile, dob: date })}
+        <NativeDatePicker
+          selectedDate={profile.dob}
+          onSelect={handleDobChange}
         />
       </Sheet>
 
@@ -61,6 +71,19 @@ export function ProfileSettings({ sheetKey, onClose }: ProfileSettingsProps) {
           selected={preferences.wristMonitorStatus}
           onSelect={(v) => setPreferences({ wristMonitorStatus: v as any })}
         />
+      </Sheet>
+
+      <Sheet visible={sheetKey === "health-app"} onClose={onClose} title="Health app">
+        <View className="py-4">
+          <Text className="font-sans text-sm text-foreground leading-relaxed mb-3">
+            Connect with Apple Health to automatically pull in your heart rate,
+            weight, and other vitals. Permissions are requested on first launch.
+          </Text>
+          <Text className="font-sans text-xs text-muted-foreground leading-relaxed">
+            In Expo Go the native HealthKit module is unavailable. Build a
+            custom dev client (EAS or Xcode) to enable real integration.
+          </Text>
+        </View>
       </Sheet>
 
       <Sheet visible={sheetKey === "help-center"} onClose={onClose} title="Help centre">

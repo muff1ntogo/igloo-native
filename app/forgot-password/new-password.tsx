@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { ArrowLeft } from "lucide-react-native";
 import { useAuth } from "@hooks/use-auth";
 
 export default function NewPasswordScreen() {
@@ -43,7 +44,14 @@ export default function NewPasswordScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background px-8 justify-center">
-      <View className="items-center mb-8">
+      {/* Back arrow */}
+      <TouchableOpacity
+        onPress={() => router.back()}
+        className="absolute top-4 left-4 size-10 rounded-full bg-card items-center justify-center border border-border"
+      >
+        <ArrowLeft size={20} color="#123247" />
+      </TouchableOpacity>
+      <View className="items-center mb-8 mt-8">
         <Text className="font-serif text-2xl font-bold text-foreground">New password</Text>
         <Text className="mt-2 font-sans text-sm text-muted-foreground text-center leading-relaxed">
           Enter a new password for your account.

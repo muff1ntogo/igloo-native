@@ -2,7 +2,9 @@ import { useState, useCallback } from "react";
 import { TextInput, Text, TouchableOpacity, View, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { ArrowLeft } from "lucide-react-native";
 import { useAuth } from "@hooks/use-auth";
+import { KeyboardDismissView } from "@components/igloo";
 
 export default function VerifyOTPScreen() {
   const router = useRouter();
@@ -37,8 +39,16 @@ export default function VerifyOTPScreen() {
   }, [token, email, flow, verifyOtp, router]);
 
   return (
+    <KeyboardDismissView style={{ flex: 1 }}>
     <SafeAreaView className="flex-1 bg-background px-8 justify-center">
-      <View className="items-center mb-8">
+      {/* Back arrow */}
+      <TouchableOpacity
+        onPress={() => router.back()}
+        className="absolute top-4 left-4 size-10 rounded-full bg-card items-center justify-center border border-border"
+      >
+        <ArrowLeft size={20} color="#123247" />
+      </TouchableOpacity>
+      <View className="items-center mb-8 mt-8">
         <Text className="font-serif text-2xl font-bold text-foreground">
           Check your email
         </Text>
@@ -92,5 +102,6 @@ export default function VerifyOTPScreen() {
         </TouchableOpacity>
       </View>
     </SafeAreaView>
+    </KeyboardDismissView>
   );
 }

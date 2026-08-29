@@ -167,6 +167,7 @@ export const STATUS_META: Record<
   },
 };
 
+// TODO(real-data): remove when VitalsGrid uses real readings for deltas/trends
 export const DELTAS: Record<MetricKey, string> = {
   bp: "-4 vs yesterday",
   hr: "+3 vs yesterday",
@@ -174,6 +175,7 @@ export const DELTAS: Record<MetricKey, string> = {
   glu: "-9 vs yesterday",
 };
 
+// TODO(real-data): remove when VitalsGrid reads from real readings
 export const TRENDS: Record<MetricKey, number[]> = {
   bp: [134, 131, 129, 133, 128, 126, 132],
   hr: [70, 72, 71, 75, 73, 76, 78],
@@ -516,6 +518,8 @@ export const INITIAL_MEDS: MedLog[] = [
   },
 ];
 
+// TODO(real-data): remove when family.tsx wires real Supabase connections
+// TODO(real-data): remove when family.tsx wires real Supabase connections
 export const LATEST: Record<MetricKey, { value: string; status: Status }> = {
   bp: { value: "132/86", status: "watch" },
   hr: { value: "78", status: "good" },

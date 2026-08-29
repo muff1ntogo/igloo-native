@@ -5,9 +5,9 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  KeyboardAvoidingView,
   Platform,
   Alert,
+  Keyboard,
 } from "react-native";
 import { X } from "lucide-react-native";
 import {
@@ -37,16 +37,21 @@ export function AddModal() {
   const [cat, setCat] = useState<Category>("measurement");
   const [metric, setMetric] = useState<MetricKey>("bp");
   const [value, setValue] = useState("");
+  const [systolic, setSystolic] = useState("");
+  const [diastolic, setDiastolic] = useState("");
   const [medName, setMedName] = useState("");
   const [medDose, setMedDose] = useState("");
   const [dayKey, setDayKey] = useState(todayKey());
   const [time, setTime] = useState("08:00");
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     if (!addOpen) return;
     setCat("measurement");
     setMetric("bp");
     setValue("");
+    setSystolic("");
+    setDiastolic("");
     setMedName("");
     setMedDose("");
     const now = new Date();
@@ -54,8 +59,34 @@ export function AddModal() {
     setTime(localISO(now).slice(11, 16));
   }, [addOpen]);
 
+  // Track real keyboard height to offset the sheet manually.
+  // KeyboardAvoidingView is unreliable inside a native Modal on iOS.
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      (e) => setKeyboardHeight(e.endCoordinates.height),
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => setKeyboardHeight(0),
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   const saveMeasurement = () => {
-    const v = value.trim();
+    let v = value.trim();
+    if (metric === "bp") {
+      const s = systolic.trim();
+      const d = diastolic.trim();
+      if (!s || !d) {
+        Alert.alert("Missing value", "Please enter both systolic and diastolic.");
+        return;
+      }
+      v = `${s}/${d}`;
+    }
     if (!v) {
       Alert.alert("Missing value", "Please enter a reading value.");
       return;
@@ -96,11 +127,14 @@ export function AddModal() {
       transparent={true}
       onRequestClose={() => setAddOpen(false)}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      <View
         className="flex-1 justify-end bg-black/50"
+        style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 8 : 0 }}
       >
-        <View className="bg-card rounded-t-[32px] p-6 max-h-[85%] border-t border-border shadow-2xl">
+        <View
+          className="bg-card rounded-t-[32px] p-6 max-h-[85%] border-t border-border shadow-2xl"
+          style={{ marginBottom: keyboardHeight > 0 ? keyboardHeight + 8 : 0 }}
+        >
           {/* Header */}
           <View className="flex-row items-center justify-between pb-4 border-b border-border/60">
             <Text className="font-serif text-xl font-bold text-foreground">
@@ -114,7 +148,10 @@ export function AddModal() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} className="py-4">
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            style={{ maxHeight: 400 }}
+          >
             {/* Category Switcher */}
             <View className="flex-row rounded-2xl bg-muted/30 p-1 mb-5">
               <TouchableOpacity
@@ -158,6 +195,10 @@ export function AddModal() {
                 setMetric={setMetric}
                 value={value}
                 setValue={setValue}
+                systolic={systolic}
+                setSystolic={setSystolic}
+                diastolic={diastolic}
+                setDiastolic={setDiastolic}
                 onSave={saveMeasurement}
               />
             ) : (
@@ -171,7 +212,7 @@ export function AddModal() {
             )}
           </ScrollView>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
