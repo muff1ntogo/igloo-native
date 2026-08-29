@@ -1,13 +1,13 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import Svg, { Rect, ClipPath, Defs } from "react-native-svg";
-import type { MetricKey } from "@lib/igloo-data";
+import Svg, { Rect, ClipPath, Defs, G } from "react-native-svg";
+import type { MetricKey, Status } from "@lib/igloo-data";
 import {
   METRIC_DETAIL,
   type Zone,
   zoneFor,
 } from "@lib/igloo-metric-detail";
-import { STATUS_HEX, STATUS_TINT } from "@lib/tokens";
+import { STATUS_HEX } from "@lib/tokens";
 import { Card } from "./Card";
 
 interface ZoneGaugeProps {
@@ -37,9 +37,17 @@ export function ZoneGauge({ metric, current }: ZoneGaugeProps) {
 
   const pct = (v: number) => ((v - min) / span) * 100;
 
-  // Zone color: prefer explicit zone.color, fall back to status-based.
-  const zoneFill = (z: Zone) => z.color ?? STATUS_TINT[z.status];
-  const zoneStroke = (z: Zone) => z.color ?? STATUS_HEX[z.status];
+  // Semantic color mapping by clinical status — exact HEX, no opacity blends.
+  // "good"  = optimal/normal → Green
+  // "watch" = borderline/ elevated → Yellow
+  // "urgent" = critical/high → Red
+  const STATUS_COLOR: Record<Status, string> = {
+    good: "#16C47F",
+    watch: "#FFD65A",
+    urgent: "#F93827",
+  };
+  const zoneFill = (z: Zone) => STATUS_COLOR[z.status];
+  const zoneStroke = (z: Zone) => STATUS_COLOR[z.status];
 
   return (
     <Card className="p-card-pad">
@@ -66,7 +74,7 @@ export function ZoneGauge({ metric, current }: ZoneGaugeProps) {
               <Rect x="0" y={bandY} width={VB_W} height={bandH} rx={2} />
             </ClipPath>
           </Defs>
-          <g clipPath="url(#gaugeClip)">
+          <G clipPath="url(#gaugeClip)">
             {/* Colored zone bands — flat internal edges, no stroke */}
             {zones.map((z: Zone) => {
               const x = pct(z.from);
@@ -82,7 +90,7 @@ export function ZoneGauge({ metric, current }: ZoneGaugeProps) {
                 />
               );
             })}
-          </g>
+          </G>
 
           {/* Outlined personal-target band (if a target is set) */}
           {target ? (
@@ -94,7 +102,6 @@ export function ZoneGauge({ metric, current }: ZoneGaugeProps) {
               fill="none"
               stroke="#186787"
               strokeWidth={0.9}
-              strokeDasharray="2 1.5"
               rx={2}
             />
           ) : null}

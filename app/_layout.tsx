@@ -26,7 +26,7 @@ function AppContent() {
     } else {
       router.replace('/(tabs)');
     }
-  }, [user, onboardingComplete, authLoading, profileReady, profileLoading, router]);
+  }, [user, onboardingComplete, authLoading, profileReady, profileLoading]);
 
   if (authLoading) {
     return (

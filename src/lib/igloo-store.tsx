@@ -159,7 +159,14 @@ export function IglooProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!user?.id) { setProfile({ name: "", dob: "" }); return; }
+    if (!user?.id) {
+      setProfile({ name: "", dob: "" });
+      setProfileReady(true);
+      setProfileLoading(false);
+      return;
+    }
+    setProfileLoading(true);
+    setProfileReady(false);
     supabase
       .from("profiles")
       .select("name, dob")
@@ -173,27 +180,12 @@ export function IglooProvider({ children }: { children: ReactNode }) {
             if (!data.dob) setOnboardingComplete(false);
             else setOnboardingComplete(true);
           }
+          setProfileReady(true);
+          setProfileLoading(false);
         },
-        (error) => { console.warn("[Igloo] Load profile error:", error.message); }
+        (error) => { console.warn("[Igloo] Load profile error:", error.message); setProfileReady(true); setProfileLoading(false); }
       );
-    Promise.resolve()
-      .then(() => supabase
-        .from("profiles")
-        .select("name, dob")
-        .eq("id", user.id)
-        .single()
-      )
-      .then(({ data, error }) => {
-        if (error) { console.warn("[Igloo] Load profile error:", error.message); return; }
-        if (data) {
-          setProfile(data);
-          if (!data.dob) setOnboardingComplete(false);
-          else setOnboardingComplete(true);
-        }
-      })
-      .catch((error) => { console.warn("[Igloo] Load profile error:", error.message); })
-      .finally(() => { setProfileReady(true); setProfileLoading(false); });
-  });
+  }, [user?.id]);
 
   const loadReadings = useCallback(async (userId: string) => {
     setReadingsLoading(true);
