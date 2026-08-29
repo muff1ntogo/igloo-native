@@ -40,18 +40,24 @@ export function useHealthConnect(): {
       return;
     }
 
+    // Only short-circuit when we already have a confirmed connection — if the
+    // user taps "Connect" again after a failure we want to re-attempt, so we
+    // fall through for "not-connected" and for the no-cache case.
     const stored = await AsyncStorage.getItem("igloo-health-conn-status");
-    if (stored === "connected" || stored === "not-connected") {
-      setStatus(stored as ConnectionStatus);
+    if (stored === "connected") {
+      setStatus("connected");
       return;
     }
 
     setStatus("syncing");
 
-    let available = true;
+    let available = false;
     try {
       await new Promise<void>((resolve) => {
-        HealthKit.isAvailable((_err: unknown, result: boolean) => resolve());
+        HealthKit.isAvailable((err: unknown, result: boolean) => {
+          available = !err && result === true;
+          resolve();
+        });
       });
     } catch {
       available = false;

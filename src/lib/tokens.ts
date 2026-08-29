@@ -87,6 +87,10 @@ export const COLORS = {
   goodTint: "#E3F3E9",
   watch: "#B0813A",
   watchTint: "#FBEEDD",
+  watchLight: "#C9A258",
+  watchLightTint: "#FDF3E0",
+  watchDark: "#8A632B",
+  watchDarkTint: "#F5E0C8",
   urgent: "#B03D3D",
   urgentTint: "#FFE8E5",
 } as const;

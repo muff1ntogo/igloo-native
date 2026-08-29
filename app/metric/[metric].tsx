@@ -17,7 +17,6 @@ import {
   numericValue,
   RANGE_LABEL,
   RANGES,
-  rollingAverage,
   seriesFor,
   zoneFor,
   type RangeKey,
@@ -102,34 +101,30 @@ export default function MetricDetailScreen() {
             </View>
           </Card>
 
-          {/* Reference-range gauge — zone bands + current-reading marker +
-              outlined personal target band. Reads from existing zone/target
-              data in igloo-metric-detail.ts. */}
+          {/* Reference-range gauge */}
           <ZoneGauge metric={m} current={current} />
 
-          {/* Time Range Selector */}
-          <View className="flex-row justify-between bg-card rounded-2xl p-1 border border-border">
-            {RANGES.map((r) => (
-              <TouchableOpacity
-                key={r}
-                onPress={() => setRange(r)}
-                className={`flex-1 py-2 items-center rounded-xl ${
-                  range === r ? "bg-primary" : "bg-transparent"
-                }`}
-              >
-                <Text
-                  className={`font-sans text-xs font-bold ${
-                    range === r ? "text-primary-foreground" : "text-muted-foreground"
+          {/* Trend Chart Card — range selector merged inside */}
+          <Card className="p-card-pad">
+            <View className="flex-row justify-between bg-muted rounded-xl p-1 mb-3">
+              {RANGES.map((r) => (
+                <TouchableOpacity
+                  key={r}
+                  onPress={() => setRange(r)}
+                  className={`flex-1 py-1.5 items-center rounded-lg ${
+                    range === r ? "bg-primary" : "bg-transparent"
                   }`}
                 >
-                  {r}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Trend Chart Card */}
-          <Card className="p-card-pad">
+                  <Text
+                    className={`font-sans text-xs font-bold ${
+                      range === r ? "text-primary-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    {r}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             <View className="flex-row items-center justify-between mb-2">
               <Text className="font-sans text-sm font-bold text-foreground">
                 Trend ({RANGE_LABEL[range]})
@@ -139,7 +134,13 @@ export default function MetricDetailScreen() {
               </Text>
             </View>
             <View className="py-2">
-              <Sparkline data={series} metric={m} height={120} variant="detailed" />
+              {series.length > 0 ? (
+                <Sparkline data={series} metric={m} height={120} variant="detailed" />
+              ) : (
+                <View className="items-center py-8">
+                  <Text className="font-sans text-sm text-muted-foreground">No records yet</Text>
+                </View>
+              )}
             </View>
           </Card>
 

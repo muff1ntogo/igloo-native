@@ -1,6 +1,7 @@
 import { METRICS, type MetricKey, type Status } from "./igloo-data";
+import { COLORS } from "./tokens";
 
-export type Zone = { name: string; from: number; to: number; status: Status };
+export type Zone = { name: string; from: number; to: number; status: Status; color?: string };
 
 export type MetricDetail = {
   /** Gauge domain */
@@ -22,8 +23,8 @@ export const METRIC_DETAIL: Record<MetricKey, MetricDetail> = {
     readsAs: "Systolic (the upper number)",
     zones: [
       { name: "Normal", from: 90, to: 120, status: "good" },
-      { name: "Elevated", from: 120, to: 130, status: "watch" },
-      { name: "Stage 1", from: 130, to: 140, status: "watch" },
+      { name: "Elevated", from: 120, to: 130, status: "watch", color: COLORS.watchLight },
+      { name: "Stage 1", from: 130, to: 140, status: "watch", color: COLORS.watchDark },
       { name: "Stage 2", from: 140, to: 180, status: "urgent" },
     ],
     target: { from: 110, to: 130 },
@@ -40,9 +41,9 @@ export const METRIC_DETAIL: Record<MetricKey, MetricDetail> = {
     min: 40,
     max: 140,
     zones: [
-      { name: "Low", from: 40, to: 60, status: "watch" },
+      { name: "Low", from: 40, to: 60, status: "watch", color: COLORS.watchLight },
       { name: "Normal resting", from: 60, to: 100, status: "good" },
-      { name: "Elevated", from: 100, to: 120, status: "watch" },
+      { name: "Elevated", from: 100, to: 120, status: "watch", color: COLORS.watchDark },
       { name: "High", from: 120, to: 140, status: "urgent" },
     ],
     target: { from: 60, to: 85 },

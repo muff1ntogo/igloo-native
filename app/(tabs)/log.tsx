@@ -132,6 +132,7 @@ export default function LogScreen() {
           </Card>
 
           {/* Log Entries Timeline */}
+          <View className="mt-2">
           {readings.length === 0 && meds.length === 0 ? (
             <Card className="p-8 items-center justify-center">
               <Text className="text-4xl mb-2">📝</Text>
@@ -149,6 +150,7 @@ export default function LogScreen() {
               ))}
             </View>
           )}
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>

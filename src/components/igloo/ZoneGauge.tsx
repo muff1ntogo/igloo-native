@@ -1,6 +1,6 @@
 import React from "react";
-import { View, Text } from "react-native";
-import Svg, { Rect, Line, Circle } from "react-native-svg";
+import { View, Text, StyleSheet } from "react-native";
+import Svg, { Rect, ClipPath, Defs } from "react-native-svg";
 import type { MetricKey } from "@lib/igloo-data";
 import {
   METRIC_DETAIL,
@@ -29,13 +29,17 @@ export function ZoneGauge({ metric, current }: ZoneGaugeProps) {
   const currentZone = zoneFor(metric, current);
   const markerColor = STATUS_HEX[currentZone.status];
 
-  // SVG geometry — viewBox is 100 wide x 22 tall (band area) + room for labels.
+  // SVG geometry — viewBox is 100 wide x 22 tall (band area).
   const VB_W = 100;
   const VB_H = 22;
   const bandY = 4;
   const bandH = 14;
 
   const pct = (v: number) => ((v - min) / span) * 100;
+
+  // Zone color: prefer explicit zone.color, fall back to status-based.
+  const zoneFill = (z: Zone) => z.color ?? STATUS_TINT[z.status];
+  const zoneStroke = (z: Zone) => z.color ?? STATUS_HEX[z.status];
 
   return (
     <Card className="p-card-pad">
@@ -48,33 +52,37 @@ export function ZoneGauge({ metric, current }: ZoneGaugeProps) {
         </Text>
       </View>
 
-      {/* Gauge */}
-      <View className="w-full" style={{ height: VB_H * 2 }}>
+      {/* Gauge wrapper — tall enough for the SVG bands + floating marker */}
+      <View className="w-full" style={{ height: VB_H * 2.2 }}>
+        {/* SVG bands with ClipPath for seamless continuous bar */}
         <Svg
           viewBox={`0 0 ${VB_W} ${VB_H}`}
           preserveAspectRatio="none"
           style={{ width: "100%", height: VB_H }}
           aria-hidden={true}
         >
-          {/* Colored zone bands */}
-          {zones.map((z: Zone) => {
-            const x = pct(z.from);
-            const w = pct(z.to) - pct(z.from);
-            return (
-              <Rect
-                key={z.name}
-                x={x.toFixed(2)}
-                y={bandY}
-                width={w.toFixed(2)}
-                height={bandH}
-                fill={STATUS_TINT[z.status]}
-                stroke={STATUS_HEX[z.status]}
-                strokeOpacity={0.25}
-                strokeWidth={0.5}
-                rx={2}
-              />
-            );
-          })}
+          <Defs>
+            <ClipPath id="gaugeClip">
+              <Rect x="0" y={bandY} width={VB_W} height={bandH} rx={2} />
+            </ClipPath>
+          </Defs>
+          <g clipPath="url(#gaugeClip)">
+            {/* Colored zone bands — flat internal edges, no stroke */}
+            {zones.map((z: Zone) => {
+              const x = pct(z.from);
+              const w = pct(z.to) - pct(z.from);
+              return (
+                <Rect
+                  key={z.name}
+                  x={x.toFixed(2)}
+                  y={bandY}
+                  width={w.toFixed(2)}
+                  height={bandH}
+                  fill={zoneFill(z)}
+                />
+              );
+            })}
+          </g>
 
           {/* Outlined personal-target band (if a target is set) */}
           {target ? (
@@ -90,25 +98,24 @@ export function ZoneGauge({ metric, current }: ZoneGaugeProps) {
               rx={2}
             />
           ) : null}
-
-          {/* Current-reading marker */}
-          <Line
-            x1={markerPct.toFixed(2)}
-            y1={bandY - 2}
-            x2={markerPct.toFixed(2)}
-            y2={bandY + bandH + 2}
-            stroke={markerColor}
-            strokeWidth={1.1}
-          />
-          <Circle
-            cx={markerPct.toFixed(2)}
-            cy={bandY + bandH / 2}
-            r={2.4}
-            fill={markerColor}
-            stroke="#FFFFFF"
-            strokeWidth={0.8}
-          />
         </Svg>
+
+        {/* Floating marker — outside SVG, sized in fixed pixels so it
+            cannot be distorted by the SVG's non-uniform scale. */}
+        <View
+          style={{
+            position: "absolute",
+            left: `${markerPct}%`,
+            top: bandY + bandH / 2 - 6,
+            width: 12,
+            height: 12,
+            borderRadius: 6,
+            backgroundColor: markerColor,
+            borderWidth: 2,
+            borderColor: "#FFFFFF",
+            transform: [{ translateX: -6 }],
+          }}
+        />
       </View>
 
       {/* Zone legend */}
@@ -123,8 +130,8 @@ export function ZoneGauge({ metric, current }: ZoneGaugeProps) {
             >
               <View
                 style={{
-                  backgroundColor: STATUS_TINT[z.status],
-                  borderColor: STATUS_HEX[z.status],
+                  backgroundColor: zoneFill(z),
+                  borderColor: zoneStroke(z),
                 }}
                 className="size-2.5 rounded-full border"
               />

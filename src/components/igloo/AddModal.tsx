@@ -20,16 +20,14 @@ import {
 import { useIgloo } from "@lib/igloo-store";
 import { AddMeasurementForm } from "./AddMeasurementForm";
 import { AddMedicationForm } from "./AddMedicationForm";
+import { zoneFor } from "@lib/igloo-metric-detail";
 
 type Category = "measurement" | "medication";
 
 function statusFor(metric: MetricKey, value: string): Status {
   const n = Number(value.split("/")[0]);
   if (Number.isNaN(n)) return "good";
-  if (metric === "bp") return n >= 140 ? "urgent" : n >= 130 ? "watch" : "good";
-  if (metric === "hr") return n >= 110 || n < 45 ? "urgent" : n >= 95 ? "watch" : "good";
-  if (metric === "ox") return n < 92 ? "urgent" : n < 96 ? "watch" : "good";
-  return n >= 180 ? "urgent" : n >= 140 ? "watch" : "good";
+  return zoneFor(metric, n).status;
 }
 
 export function AddModal() {
@@ -133,7 +131,6 @@ export function AddModal() {
       >
         <View
           className="bg-card rounded-t-[32px] p-6 max-h-[85%] border-t border-border shadow-2xl"
-          style={{ marginBottom: keyboardHeight > 0 ? keyboardHeight + 8 : 0 }}
         >
           {/* Header */}
           <View className="flex-row items-center justify-between pb-4 border-b border-border/60">
