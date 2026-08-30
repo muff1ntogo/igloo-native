@@ -43,7 +43,7 @@ export default function MetricDetailScreen() {
   const meta = METRICS[m];
   const detail = METRIC_DETAIL[m];
   const latest = useLatest();
-  const { simpleView } = useIgloo();
+  const { simpleView, readings } = useIgloo();
   const reading = latest[m];
 
   const current = numericValue(m, reading?.value);
@@ -51,7 +51,7 @@ export default function MetricDetailScreen() {
   const status = reading?.status ?? "good";
   const [range, setRange] = useState<RangeKey>("1M");
 
-  const series = useMemo(() => seriesFor(m, range, current), [m, range, current]);
+  const series = useMemo(() => seriesFor(m, range, readings), [m, range, readings]);
   const periodAvg = average(series);
 
   return (

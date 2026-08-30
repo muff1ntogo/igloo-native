@@ -46,8 +46,8 @@ export function ZoneGauge({ metric, current }: ZoneGaugeProps) {
     watch: "#FFD65A",
     urgent: "#F93827",
   };
-  const zoneFill = (z: Zone) => STATUS_COLOR[z.status];
-  const zoneStroke = (z: Zone) => STATUS_COLOR[z.status];
+  const zoneFill = (z: Zone) => z.color ?? STATUS_COLOR[z.status];
+  const zoneStroke = zoneFill;
 
   return (
     <Card className="p-card-pad">

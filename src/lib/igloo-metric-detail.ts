@@ -1,4 +1,4 @@
-import { METRICS, type MetricKey, type Status } from "./igloo-data";
+import { METRICS, type MetricKey, type Reading, type Status } from "./igloo-data";
 import { COLORS } from "./tokens";
 
 export type Zone = { name: string; from: number; to: number; status: Status; color?: string };
@@ -101,15 +101,6 @@ export const DOCTOR_NOTE =
 export const RANGES = ["1W", "1M", "3M", "6M", "1Y", "All"] as const;
 export type RangeKey = (typeof RANGES)[number];
 
-const POINTS: Record<RangeKey, number> = {
-  "1W": 7,
-  "1M": 15,
-  "3M": 24,
-  "6M": 30,
-  "1Y": 36,
-  All: 44,
-};
-
 export const RANGE_LABEL: Record<RangeKey, string> = {
   "1W": "last 7 days",
   "1M": "last month",
@@ -119,19 +110,32 @@ export const RANGE_LABEL: Record<RangeKey, string> = {
   All: "all time",
 };
 
-/** Deterministic mock series so the chart is stable across renders. */
-export function seriesFor(metric: MetricKey, range: RangeKey, current: number): number[] {
-  const n = POINTS[range];
-  const spread = (METRIC_DETAIL[metric].max - METRIC_DETAIL[metric].min) * 0.14;
-  const seed = metric.charCodeAt(0) * 31 + range.charCodeAt(0);
-  const out: number[] = [];
-  for (let i = 0; i < n; i++) {
-    const wobble = Math.sin((i + seed) * 1.7) * 0.6 + Math.sin((i + seed) * 0.53) * 0.4;
-    const drift = ((i - n + 1) / n) * spread * 0.5;
-    out.push(Math.round((current - drift + wobble * spread) * 10) / 10);
+/** Build a time-series array from real readings, grouped by calendar day. */
+export function seriesFor(
+  metric: MetricKey,
+  range: RangeKey,
+  readings: Reading[],
+): number[] {
+  const days: Record<RangeKey, number | null> = {
+    "1W": 7, "1M": 30, "3M": 90, "6M": 180, "1Y": 365, All: null,
+  };
+  const d = days[range];
+  const cutoff = d ? new Date(Date.now() - d * 86400000) : null;
+
+  const rel = readings
+    .filter((r) => r.metric === metric && (!cutoff || new Date(r.at) >= cutoff))
+    .sort((a, b) => a.at.localeCompare(b.at));
+
+  if (range === "1W") return rel.map((r) => numericValue(metric, r.value));
+
+  const byDay = new Map<string, number[]>();
+  for (const r of rel) {
+    const day = r.at.slice(0, 10);
+    (byDay.get(day) ?? byDay.set(day, []).get(day)!).push(numericValue(metric, r.value));
   }
-  out[n - 1] = current;
-  return out;
+  return [...byDay.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, vals]) => vals.reduce((s, v) => s + v, 0) / vals.length);
 }
 
 export function rollingAverage(data: number[], window = 5): number[] {
