@@ -38,6 +38,19 @@ export function Sparkline({
   const bottomPad = 3;
   const plotH = 30 - topPad - bottomPad;
 
+  if (data.length === 1) {
+    // A single reading can't show a trend — render one centered dot instead
+    // of a degenerate line/area path.
+    const y = topPad + (1 - (data[0] - min) / span) * plotH;
+    return (
+      <View className={cn("w-full justify-center", className)} style={{ height }}>
+        <Svg viewBox="0 0 100 30" preserveAspectRatio="none" style={{ width: "100%", height }} aria-hidden={true}>
+          <Circle cx={50} cy={y} r={variant === "detailed" ? 1.2 : 1.6} fill={color} />
+        </Svg>
+      </View>
+    );
+  }
+
   const pts = data.map((v, i) => {
     const x = (i / (data.length - 1)) * 100;
     const y = topPad + (1 - (v - min) / span) * plotH;
