@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { ScrollView, View, Text, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
+import { useFocusEffect } from "expo-router";
 import {
   dayKeyOf,
   dayLabel,
@@ -47,6 +48,21 @@ export default function LogScreen() {
   const today = todayKey();
   const [selected, setSelected] = useState(today);
   const [weekIdx, setWeekIdx] = useState(weeks.length - 1);
+  const [hasManuallySelected, setHasManuallySelected] = useState(false);
+  const hasManuallySelectedRef = useRef(false);
+
+  // Re-sync selected to today when the screen regains focus, but only
+  // if the user hasn't deliberately navigated to a different day.
+  useFocusEffect(
+    useMemo(() => {
+      hasManuallySelectedRef.current = hasManuallySelected;
+      return () => {
+        if (!hasManuallySelectedRef.current) {
+          setSelected(todayKey());
+        }
+      };
+    }, [hasManuallySelected]), // re-subscribe only when the flag actually flips
+  );
 
   const dayEntries = useMemo(() => {
     const list: Entry[] = [
@@ -106,7 +122,10 @@ export default function LogScreen() {
                 return (
                   <TouchableOpacity
                     key={key}
-                    onPress={() => setSelected(key)}
+                    onPress={() => {
+                      setSelected(key);
+                      setHasManuallySelected(true);
+                    }}
                     className={`items-center py-2 px-2.5 rounded-2xl ${
                       isSel ? "bg-primary" : isToday ? "bg-primary-tint" : "bg-transparent"
                     }`}

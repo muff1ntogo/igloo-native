@@ -1,30 +1,38 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import {
   METRICS,
   METRIC_ORDER,
   STATUS_META,
-  TRENDS,
-  DELTAS,
   timeOf,
   type MetricKey,
   type Reading,
 } from "@lib/igloo-data";
-import { zoneLabelFor } from "@lib/igloo-metric-detail";
+import {
+  seriesFor,
+  average,
+  numericValue,
+  zoneLabelFor,
+} from "@lib/igloo-metric-detail";
 import { Card } from "./Card";
 import { StatusBadge } from "./Badge";
 import { BigNumber } from "./BigNumber";
 import { MetricIcon } from "./MetricIcon";
 import { Sparkline } from "./Sparkline";
 
-// TODO(real-data): compute from real readings instead of hardcoded DELTAS/TRENDS
 interface VitalsGridProps {
   latest: Record<MetricKey, Reading | undefined>;
   mode: "delta" | "status";
+  readings: Reading[];
 }
 
-export function VitalsGrid({ latest, mode }: VitalsGridProps) {
+function formatDelta(diff: number): string {
+  if (diff === 0) return "Same as 7d avg";
+  return `${diff > 0 ? "+" : ""}${diff} vs 7d avg`;
+}
+
+export function VitalsGrid({ latest, mode, readings }: VitalsGridProps) {
   const router = useRouter();
 
   return (
@@ -32,8 +40,17 @@ export function VitalsGrid({ latest, mode }: VitalsGridProps) {
       {METRIC_ORDER.map((m) => {
         const reading = latest[m];
         const meta = METRICS[m];
-        const delta = DELTAS[m];
-        const trend = TRENDS[m];
+
+        const trend = useMemo(
+          () => seriesFor(m, "1W", readings),
+          [m, readings],
+        );
+        const avg7d = trend.length ? average(trend) : null;
+        const current = reading ? numericValue(m, reading.value) : null;
+        const delta =
+          current != null && avg7d != null
+            ? formatDelta(Math.round(current - avg7d))
+            : "Not enough data yet";
 
         return (
           <TouchableOpacity

@@ -123,7 +123,7 @@ export default function DashboardScreen() {
             <Text className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground mt-island">
               Vitals at a glance
             </Text>
-            <VitalsGrid latest={latest} mode={mode} />
+            <VitalsGrid latest={latest} mode={mode} readings={readings} />
             <ConsistencyCard week={week} measurementDays={measurementDays} />
             <DoctorReportBanner onPress={handleExportReport} />
           </View>

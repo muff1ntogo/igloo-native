@@ -167,21 +167,7 @@ export const STATUS_META: Record<
   },
 };
 
-// TODO(real-data): remove when VitalsGrid uses real readings for deltas/trends
-export const DELTAS: Record<MetricKey, string> = {
-  bp: "-4 vs yesterday",
-  hr: "+3 vs yesterday",
-  ox: "+1 vs yesterday",
-  glu: "-9 vs yesterday",
-};
 
-// TODO(real-data): remove when VitalsGrid reads from real readings
-export const TRENDS: Record<MetricKey, number[]> = {
-  bp: [134, 131, 129, 133, 128, 126, 132],
-  hr: [70, 72, 71, 75, 73, 76, 78],
-  ox: [96, 97, 97, 96, 98, 97, 97],
-  glu: [118, 112, 121, 109, 114, 106, 104],
-};
 
 // ---------- mock log: past two weeks ----------
 

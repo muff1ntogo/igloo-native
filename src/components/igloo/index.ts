@@ -22,3 +22,4 @@ export * from "./Sheet";
 export * from "./ProfileSettings";
 export * from "./KeyboardDismissView";
 export { NativeDatePicker } from "./NativeDatePicker";
+export { NativeTimePicker } from "./NativeTimePicker";

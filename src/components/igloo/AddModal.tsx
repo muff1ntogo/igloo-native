@@ -20,6 +20,8 @@ import {
 import { useIgloo } from "@lib/igloo-store";
 import { AddMeasurementForm } from "./AddMeasurementForm";
 import { AddMedicationForm } from "./AddMedicationForm";
+import { NativeDatePicker } from "./NativeDatePicker";
+import { NativeTimePicker } from "./NativeTimePicker";
 import { zoneFor } from "@lib/igloo-metric-detail";
 
 type Category = "measurement" | "medication";
@@ -149,6 +151,29 @@ export function AddModal() {
             showsVerticalScrollIndicator={false}
             style={{ maxHeight: 400 }}
           >
+            {/* Date + Time Row */}
+            <View className="flex-row gap-3 mb-5">
+              <View className="flex-1">
+                <Text className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                  Date
+                </Text>
+                <NativeDatePicker
+                  selectedDate={dayKey}
+                  onSelect={(d) => setDayKey(d)}
+                  maxYear={new Date().getFullYear()}
+                />
+              </View>
+              <View className="flex-1">
+                <Text className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                  Time
+                </Text>
+                <NativeTimePicker
+                  selectedTime={time}
+                  onSelect={(t) => setTime(t)}
+                />
+              </View>
+            </View>
+
             {/* Category Switcher */}
             <View className="flex-row rounded-2xl bg-muted/30 p-1 mb-5">
               <TouchableOpacity
