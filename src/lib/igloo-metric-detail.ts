@@ -111,10 +111,11 @@ export const RANGE_LABEL: Record<RangeKey, string> = {
 };
 
 /** Build a time-series array from real readings, grouped by calendar day. */
-export function seriesFor(
-  metric: MetricKey,
+function bucketedSeries(
   range: RangeKey,
   readings: Reading[],
+  metric: MetricKey,
+  extract: (value: string) => number,
 ): number[] {
   const days: Record<RangeKey, number | null> = {
     "1W": 7, "1M": 30, "3M": 90, "6M": 180, "1Y": 365, All: null,
@@ -126,16 +127,24 @@ export function seriesFor(
     .filter((r) => r.metric === metric && (!cutoff || new Date(r.at) >= cutoff))
     .sort((a, b) => a.at.localeCompare(b.at));
 
-  if (range === "1W") return rel.map((r) => numericValue(metric, r.value));
+  if (range === "1W") return rel.map((r) => extract(r.value));
 
   const byDay = new Map<string, number[]>();
   for (const r of rel) {
     const day = r.at.slice(0, 10);
-    (byDay.get(day) ?? byDay.set(day, []).get(day)!).push(numericValue(metric, r.value));
+    (byDay.get(day) ?? byDay.set(day, []).get(day)!).push(extract(r.value));
   }
   return [...byDay.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([, vals]) => vals.reduce((s, v) => s + v, 0) / vals.length);
+}
+
+export function seriesFor(metric: MetricKey, range: RangeKey, readings: Reading[]) {
+  return bucketedSeries(range, readings, metric, (v) => numericValue(metric, v));
+}
+
+export function diastolicSeriesFor(range: RangeKey, readings: Reading[]) {
+  return bucketedSeries(range, readings, "bp", diastolicValue);
 }
 
 export function rollingAverage(data: number[], window = 5): number[] {
@@ -156,6 +165,13 @@ export function numericValue(metric: MetricKey, value: string | undefined): numb
   if (!value) return 0;
   const first = value.split("/")[0] ?? value;
   const n = Number.parseFloat(first);
+  return Number.isFinite(n) ? n : 0;
+}
+
+export function diastolicValue(value: string | undefined): number {
+  if (!value) return 0;
+  const second = value.split("/")[1];
+  const n = Number.parseFloat(second ?? "");
   return Number.isFinite(n) ? n : 0;
 }
 
