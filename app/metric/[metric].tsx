@@ -52,7 +52,16 @@ export default function MetricDetailScreen() {
   const [range, setRange] = useState<RangeKey>("1M");
 
   const series = useMemo(() => seriesFor(m, range, readings), [m, range, readings]);
-  const periodAvg = average(series);
+  const diastolicSeries = useMemo(
+    () => (m === "bp" ? diastolicSeriesFor(range, readings) : []),
+    [m, range, readings],
+  );
+  const isRaw = range === "1W";
+  const chartSeries = isRaw ? series : rollingAverage(series, 3);
+  const chartDiastolicSeries =
+    m === "bp" ? (isRaw ? diastolicSeries : rollingAverage(diastolicSeries, 3)) : undefined;
+  const periodAvg = average(chartSeries);
+  const diastolicPeriodAvg = chartDiastolicSeries?.length ? average(chartDiastolicSeries) : null;
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
@@ -130,18 +139,39 @@ export default function MetricDetailScreen() {
                 Trend ({RANGE_LABEL[range]})
               </Text>
               <Text className="font-sans text-xs font-semibold text-muted-foreground">
-                Avg: {Math.round(periodAvg)} {meta.unit}
+                {m === "bp" && diastolicPeriodAvg != null
+                  ? `Avg: ${Math.round(periodAvg)}/${Math.round(diastolicPeriodAvg)} mmHg`
+                  : `Avg: ${Math.round(periodAvg)} ${meta.unit}`}
               </Text>
             </View>
             <View className="py-2">
               {series.length > 0 ? (
-                <Sparkline data={series} metric={m} height={120} variant="detailed" />
+                <Sparkline
+                  data={chartSeries}
+                  metric={m}
+                  height={120}
+                  variant="detailed"
+                  secondaryData={m === "bp" ? chartDiastolicSeries : undefined}
+                  showAllPoints={isRaw}
+                />
               ) : (
                 <View className="items-center py-8">
                   <Text className="font-sans text-sm text-muted-foreground">No records yet</Text>
                 </View>
               )}
             </View>
+            {m === "bp" && chartDiastolicSeries && chartDiastolicSeries.length > 0 ? (
+              <View className="flex-row items-center gap-3 mt-1 px-1">
+                <View className="flex-row items-center gap-1">
+                  <View className="w-4 h-0.5 bg-[#B14A62]" />
+                  <Text className="font-sans text-xs text-muted-foreground">Systolic</Text>
+                </View>
+                <View className="flex-row items-center gap-1">
+                  <View className="w-4 h-0.5 bg-[#B14A62] border-t border-dashed border-[#B14A62]" style={{ borderBottomWidth: 0 }} />
+                  <Text className="font-sans text-xs text-muted-foreground">Diastolic</Text>
+                </View>
+              </View>
+            ) : null}
           </Card>
 
           {/* About Metric */}
